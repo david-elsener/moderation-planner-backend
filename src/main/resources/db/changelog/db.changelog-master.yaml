@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: user
+      changes:
+        - createTable:
+            tableName: moderator
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+              - column:
+                  name: first_name
+                  type: VARCHAR(255)
+              - column:
+                  name: last_name
+                  type: VARCHAR(255)
+              - column:
+                  name: image_data
+                  type: BLOB
+        - addPrimaryKey:
+            tableName: moderator
+            columnNames: id
+            constraintName: pk_moderator
+
+  - changeSet:
+      id: 2
+      author: user
+      changes:
+        - createTable:
+            tableName: moderation_track
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+              - column:
+                  name: moderator_id
+                  type: UUID
+              - column:
+                  name: channel
+                  type: VARCHAR(255)
+              - column:
+                  name: start_time
+                  type: TIMESTAMP
+              - column:
+                  name: end_time
+                  type: TIMESTAMP
+        - addPrimaryKey:
+            tableName: moderation_track
+            columnNames: id
+            constraintName: pk_moderation_track
+        - addForeignKeyConstraint:
+            baseTableName: moderation_track
+            baseColumnNames: moderator_id
+            referencedTableName: moderator
+            referencedColumnNames: id
+            constraintName: fk_moderation_moderator
