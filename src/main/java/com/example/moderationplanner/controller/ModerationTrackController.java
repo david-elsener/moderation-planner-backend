@@ -7,7 +7,7 @@ import com.example.moderationplanner.repository.ModeratorRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,8 +40,8 @@ public class ModerationTrackController {
         ModerationTrack track = new ModerationTrack();
         track.setModerator(moderatorOpt.get());
         track.setChannel(trackDTO.channel);
-        track.setStartTime(LocalDateTime.parse(trackDTO.startTime));
-        track.setEndTime(LocalDateTime.parse(trackDTO.endTime));
+        track.setStartTime(OffsetDateTime.parse(trackDTO.startTime).toLocalDateTime());
+        track.setEndTime(OffsetDateTime.parse(trackDTO.endTime).toLocalDateTime());
 
         trackRepository.save(track);
         return ResponseEntity.ok(track);
