@@ -5,7 +5,7 @@ import com.example.moderationplanner.repository.ModeratorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,12 +22,14 @@ public class ModeratorService {
         return moderatorRepository.findAll();
     }
 
-    public Moderator createModerator(String firstName, String lastName, MultipartFile file) throws IOException {
-        Moderator moderator = new Moderator();
-        moderator.setFirstName(firstName);
-        moderator.setLastName(lastName);
-        moderator.setImageData(file.getBytes());
-        return moderatorRepository.save(moderator);
+    public Moderator createModerator(String firstName, String lastName, MultipartFile file) {
+        try {
+            byte[] imageData = file.getBytes();
+            Moderator moderator = new Moderator(null, firstName, lastName, imageData);
+            return moderatorRepository.save(moderator);
+        } catch (Exception e) {
+            throw new UncheckedIOException("Failed to read image data", new java.io.IOException(e));
+        }
     }
 
     public void deleteModerator(UUID id) {

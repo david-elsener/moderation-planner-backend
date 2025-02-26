@@ -1,0 +1,214 @@
+diff --git a/build.gradle b/build.gradle
+index ce93857..cda4cf4 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -6,13 +6,15 @@ plugins {
+ 
+ group = 'com.example'
+ version = '1.0.0'
+-sourceCompatibility = '17'
++sourceCompatibility = '21'
+ 
+ repositories {
+     mavenCentral()
+ }
+ 
+ dependencies {
++    compileOnly 'org.projectlombok:lombok:1.18.26'
++    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+     implementation 'org.springframework.boot:spring-boot-starter-web'
+     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+     implementation 'org.liquibase:liquibase-core'
+diff --git a/src/main/java/com/example/moderationplanner/controller/ModeratorController.java b/src/main/java/com/example/moderationplanner/controller/ModeratorController.java
+index 82fbf59..157da18 100644
+--- a/src/main/java/com/example/moderationplanner/controller/ModeratorController.java
++++ b/src/main/java/com/example/moderationplanner/controller/ModeratorController.java
+@@ -8,10 +8,8 @@ import org.springframework.util.Base64Utils;
+ import org.springframework.web.bind.annotation.*;
+ import org.springframework.web.multipart.MultipartFile;
+ 
+-import java.io.IOException;
+ import java.util.List;
+ import java.util.UUID;
+-import java.util.stream.Collectors;
+ 
+ @RestController
+ @RequestMapping("/api/moderators")
+@@ -24,13 +22,16 @@ public class ModeratorController {
+     }
+ 
+     @GetMapping
+-    public List<ModeratorDTO> getAllModerators() {
+-        return moderatorService.getAllModerators().stream().map(moderator -> new ModeratorDTO(
+-                moderator.getId(),
+-                moderator.getFirstName(),
+-                moderator.getLastName(),
+-                "data:image/jpeg;base64," + Base64Utils.encodeToString(moderator.getImageData())
+-        )).collect(Collectors.toList());
++    public ResponseEntity<List<ModeratorDTO>> getAllModerators() {
++        List<ModeratorDTO> moderators = moderatorService.getAllModerators().stream()
++                .map(moderator -> new ModeratorDTO(
++                        moderator.getId(),
++                        moderator.getFirstName(),
++                        moderator.getLastName(),
++                        "data:image/jpeg;base64," + Base64Utils.encodeToString(moderator.getImageData())
++                ))
++                .toList();
++        return ResponseEntity.ok(moderators);
+     }
+ 
+     @PostMapping(consumes = "multipart/form-data")
+@@ -39,31 +40,16 @@ public class ModeratorController {
+             @RequestParam("lastName") String lastName,
+             @RequestParam("image") MultipartFile file) {
+ 
+-        try {
+-            Moderator createdModerator = moderatorService.createModerator(firstName, lastName, file);
+-            return new ResponseEntity<>(createdModerator, HttpStatus.CREATED);
+-        } catch (IOException e) {
+-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+-        }
++        Moderator createdModerator = moderatorService.createModerator(firstName, lastName, file);
++        return new ResponseEntity<>(createdModerator, HttpStatus.CREATED);
+     }
+ 
+     @DeleteMapping("/{id}")
+-    public void deleteModerator(@PathVariable UUID id) {
++    public ResponseEntity<Void> deleteModerator(@PathVariable UUID id) {
+         moderatorService.deleteModerator(id);
++        return ResponseEntity.noContent().build();
+     }
+ 
+-    // DTO class for returning Base64 encoded images
+-    public static class ModeratorDTO {
+-        public UUID id;
+-        public String firstName;
+-        public String lastName;
+-        public String imageData;
+-
+-        public ModeratorDTO(UUID id, String firstName, String lastName, String imageData) {
+-            this.id = id;
+-            this.firstName = firstName;
+-            this.lastName = lastName;
+-            this.imageData = imageData;
+-        }
+-    }
++    // DTO class for returning Base64 encoded images as a Record
++    public record ModeratorDTO(UUID id, String firstName, String lastName, String imageData) {}
+ }
+diff --git a/src/main/java/com/example/moderationplanner/entity/ModerationTrack.java b/src/main/java/com/example/moderationplanner/entity/ModerationTrack.java
+index 2a5ced9..ce11c68 100644
+--- a/src/main/java/com/example/moderationplanner/entity/ModerationTrack.java
++++ b/src/main/java/com/example/moderationplanner/entity/ModerationTrack.java
+@@ -1,10 +1,17 @@
+ package com.example.moderationplanner.entity;
+ 
+ import jakarta.persistence.*;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import lombok.AllArgsConstructor;
++
+ import java.time.LocalDateTime;
+ import java.util.UUID;
+ 
+ @Entity
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
+ public class ModerationTrack {
+ 
+     @Id
+@@ -18,20 +25,4 @@ public class ModerationTrack {
+     private String channel;
+     private LocalDateTime startTime;
+     private LocalDateTime endTime;
+-
+-    // Getters and Setters
+-    public UUID getId() { return id; }
+-    public void setId(UUID id) { this.id = id; }
+-
+-    public Moderator getModerator() { return moderator; }
+-    public void setModerator(Moderator moderator) { this.moderator = moderator; }
+-
+-    public String getChannel() { return channel; }
+-    public void setChannel(String channel) { this.channel = channel; }
+-
+-    public LocalDateTime getStartTime() { return startTime; }
+-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+-
+-    public LocalDateTime getEndTime() { return endTime; }
+-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+ }
+diff --git a/src/main/java/com/example/moderationplanner/entity/Moderator.java b/src/main/java/com/example/moderationplanner/entity/Moderator.java
+index f316cf3..a624999 100644
+--- a/src/main/java/com/example/moderationplanner/entity/Moderator.java
++++ b/src/main/java/com/example/moderationplanner/entity/Moderator.java
+@@ -1,9 +1,16 @@
+ package com.example.moderationplanner.entity;
+ 
+ import jakarta.persistence.*;
++import lombok.Data;
++import lombok.NoArgsConstructor;
++import lombok.AllArgsConstructor;
++
+ import java.util.UUID;
+ 
+ @Entity
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
+ public class Moderator {
+ 
+     @Id
+@@ -15,17 +22,4 @@ public class Moderator {
+ 
+     @Lob
+     private byte[] imageData;
+-
+-    // Getters and Setters
+-    public UUID getId() { return id; }
+-    public void setId(UUID id) { this.id = id; }
+-
+-    public String getFirstName() { return firstName; }
+-    public void setFirstName(String firstName) { this.firstName = firstName; }
+-
+-    public String getLastName() { return lastName; }
+-    public void setLastName(String lastName) { this.lastName = lastName; }
+-
+-    public byte[] getImageData() { return imageData; }
+-    public void setImageData(byte[] imageData) { this.imageData = imageData; }
+ }
+diff --git a/src/main/java/com/example/moderationplanner/service/ModeratorService.java b/src/main/java/com/example/moderationplanner/service/ModeratorService.java
+index 094ec58..aa122a5 100644
+--- a/src/main/java/com/example/moderationplanner/service/ModeratorService.java
++++ b/src/main/java/com/example/moderationplanner/service/ModeratorService.java
+@@ -5,7 +5,7 @@ import com.example.moderationplanner.repository.ModeratorRepository;
+ import org.springframework.stereotype.Service;
+ import org.springframework.web.multipart.MultipartFile;
+ 
+-import java.io.IOException;
++import java.io.UncheckedIOException;
+ import java.util.List;
+ import java.util.UUID;
+ 
+@@ -22,12 +22,14 @@ public class ModeratorService {
+         return moderatorRepository.findAll();
+     }
+ 
+-    public Moderator createModerator(String firstName, String lastName, MultipartFile file) throws IOException {
+-        Moderator moderator = new Moderator();
+-        moderator.setFirstName(firstName);
+-        moderator.setLastName(lastName);
+-        moderator.setImageData(file.getBytes());
+-        return moderatorRepository.save(moderator);
++    public Moderator createModerator(String firstName, String lastName, MultipartFile file) {
++        try {
++            byte[] imageData = file.getBytes();
++            Moderator moderator = new Moderator(null, firstName, lastName, imageData);
++            return moderatorRepository.save(moderator);
++        } catch (Exception e) {
++            throw new UncheckedIOException("Failed to read image data", new java.io.IOException(e));
++        }
+     }
+ 
+     public void deleteModerator(UUID id) {
